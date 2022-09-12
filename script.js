@@ -1,23 +1,18 @@
 window.onresize = changeWindow;
 let n = 10;
-let grid = [];
-for(let i = 0; i < n; i++) {
-  let temp = [];
-  for(let j = 0; j < n; j++) {
-    temp.push(Math.random());
-  }
-  grid.push(temp);
-}
+let grid;
+let curImage = [0, 0];
 const sqr = Math.pow(n, 2);
 let net = new NeuralNetwork(sqr, [sqr, Math.floor(sqr / 2), 2]);
 let unit;
 let xStart;
 let yStart;
 let focus = [0, 0];
-let variation = 3;
+let variation = 1.3;
 changeWindow();
-let curImage = [0, 0];
-let middle = Math.floor(n / 2) + .5;
+let mid = Math.floor(n / 2) + (.5 * (n % 2 - 1));
+grid = makeCircle();
+let text;
 
 function load() {
   canvas = document.querySelector('.canvas');
@@ -25,16 +20,12 @@ function load() {
   canvas.width = width;
   canvas.height = height;
   document.onkeydown = keyPress;
+  text = document.getElementById("topText");
   drawScreen();
   for(let i = 0; i < 1000; i++) {
     netTrain(getData());
   }
-}
-
-function runFrame() {
-  //DO ALL DRAWING HERE
-
-  requestAnimationFrame(runFrame);
+  netGuess();
 }
 
 function getData() {
@@ -73,15 +64,17 @@ function makeCircle() {
   for(let i = 0; i < n; i++) {
     let temp = [];
     for(let j = 0; j < n; j++) {
-      temp.push(getSmallNum());
+      let dist = Math.sqrt(Math.pow(i - mid, 2) + Math.pow(j - mid, 2));
+      dist -= Math.floor(n / 2) - .5;
+      dist = Math.abs(dist);
+      if(dist <= .5) {
+        temp.push(getBigNum());
+      } else {
+        temp.push(getSmallNum());
+      }
+      
     }
     newGrid.push(temp);
-  }
-  for(let i = 1; i < n - 1; i++) {
-    newGrid[0][i] = getBigNum();
-    newGrid[n - 1][i] = getBigNum();
-    newGrid[i][0] = getBigNum();
-    newGrid[i][n - 1] = getBigNum();
   }
   return newGrid;
 }
@@ -97,11 +90,18 @@ function getInput(gr) {
 }
 
 function netGuess() {
-  const guess = net.pass(getInput(grid));
-  if(guess[0] > guess[1]) {
-    console.log('Net says Cross');
+  let guess = net.pass(getInput(grid));
+  guess = guess[0] > guess[1]? 1 : 0;
+  let ans;
+  if(guess == curImage[0]) {
+    ans = 'Correct!'
   } else {
-    console.log('Net says Circle');
+    ans = 'Wrong!';
+  }
+  if(guess == 1) {
+    text.innerHTML = 'Net Guess: Cross - ' + ans;
+  } else {
+    text.innerHTML = 'Net Guess: Circle - ' + ans;
   }
 }
 

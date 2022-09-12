@@ -6,3 +6,10 @@ body {
   overflow: hidden;
   background: #000030;
 }
+#topText {
+  position: absolute;
+  left: 40%;
+  top: -2%;
+  font-family: 'Courier New', monospace;
+  color: white;
+}

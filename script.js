@@ -8,7 +8,7 @@ let unit;
 let xStart;
 let yStart;
 let focus = [0, 0];
-let variation = 1.3;
+let variation = 1.5;
 changeWindow();
 let mid = Math.floor(n / 2) + (.5 * (n % 2 - 1));
 grid = makeCircle();

@@ -8,19 +8,22 @@ const relu = {
   d: z => z < 0? 0:1
 };
 
+const colors = ['red', 'green', 'blue'];
+
 class NeuralNetwork {
   //numIn is an int of inputs
   //dim is an array, where the length is the number of layers and
   //the ints inside are the depth of each layer
   //activationFunctions is an array w/ the same length as dim, where
   //a function is an array [func, dx/dy]
-  constructor(numIn, dim, activationFunctions = []) {
-    while(dim.length > activationFunctions.length) {
-      activationFunctions.push(sigmoid);
+  constructor(numIn, dim, params = {}) {
+    this.actFunc = params.actFunc || [];
+    while(dim.length > this.actFunc.length) {
+      this.actFunc.push(sigmoid);
     }
+    this.softmax = params.softmax || false;
     this.numIn = numIn;
     this.dim = dim;
-    this.actFunc = activationFunctions;
     this.weights = [];
     this.biases = [];
     for(let i = 0; i < dim.length; i++) {
@@ -38,6 +41,7 @@ class NeuralNetwork {
       this.weights.push(layer);
       this.biases.push(biasLayer);
     }
+    this.error = [[]];
   }
 
   draw(x, y, w, h) {
@@ -78,8 +82,52 @@ class NeuralNetwork {
       }
       nextIn = newIn;
     }
-
+    if(this.softmax) {
+      let ret = [];
+      let sum = 0;
+      for(let n of nextIn) {
+        sum += Math.exp(n);
+      }
+      for(let n of nextIn) {
+        ret.push(Math.exp(n) / sum);
+      }
+      return ret;
+    }
     return nextIn;
+  }
+  drawGraph(x, y, w, h) {
+    let n = 0;
+    let max = 0; 
+    for(let i = 0; i < this.error.length; i++) {
+      for(let j = 0; j < this.error[i].length; j++) {
+        n++;
+        if(this.error[i][j] > max) {
+          max = this.error[i][j];
+        }
+      }
+    }
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    let clr = 0;
+    let cur = 0;
+    for(let i = 0; i < this.error.length; i++) {
+      ctx.strokeStyle = colors[clr];
+      for(let j = 0; j < this.error[i].length; j++) {
+        let pointX = (cur / n * w) + x;
+        let pointY = ((1 - (this.error[i][j] / max)) * h) + y;
+        ctx.strokeRect(pointX, pointY, 1, 1);
+        cur++;
+      }
+      clr++;
+      clr %= colors.length;
+    }
   }
 
   getGradient(inp, ans) {
@@ -107,16 +155,42 @@ class NeuralNetwork {
       inputs.push(inpTemp);
       outputs.push(outTemp);
     }
-    const predicted = nextIn;
+    
+    let predicted = nextIn;
     const finalInd = outputs.length - 1;
+    
+    if(this.softmax) {
+      predicted = [];
+      let sum = 0;
+      for(let n of nextIn) {
+        sum += Math.exp(n);
+      }
+      for(let n of nextIn) {
+        predicted.push(Math.exp(n) / sum);
+      }
+    }
 
     let error = 0;
     for(let i = 0; i < predicted.length; i++) {
       error += Math.pow(ans[i] - predicted[i], 2);
     }
-    
+    this.error[this.error.length - 1].push(error);
+
+    //Get derivative of last layer
     for(let i = 0; i < outputs[finalInd].length; i++) {
-      outputs[finalInd][i] = -2 * (ans[i] - predicted[i]);
+      if(this.softmax) {
+        let sum = 0;
+        for(let j = 0; j < predicted.length; j++) {
+          if(i == j) {
+            sum += predicted[j] * (1 - outputs[finalInd][i]) * -2 * (ans[j] - predicted[j]);
+          } else {
+            sum += predicted[j] * (0 - outputs[finalInd][i]) * -2 * (ans[j] - predicted[j]);
+          }
+        }
+        outputs[finalInd][i] = sum;
+      } else {
+        outputs[finalInd][i] = -2 * (ans[i] - predicted[i]);
+      }
     }
 
     for(let i = finalInd; i >= 0; i--) {
@@ -154,7 +228,7 @@ class NeuralNetwork {
       }
 
     }
-    return [weightGradient, inputs, error];
+    return [weightGradient, inputs];
   }
 
   //Inp is a 2d Array of all data
@@ -163,12 +237,10 @@ class NeuralNetwork {
     let first = this.getGradient(inp[0], ans[0]);
     let fullWeightGradient = first[0];
     let fullBiasGradient = first[1];
-    let error = first[2];
     for(let i = 1; i < inp.length; i++) {
       const gradient = this.getGradient(inp[i], ans[i]);
       let weightGradient = gradient[0];
       const biasGradient = gradient[1];
-      error += gradient[2];
       for(let x = 0; x < fullWeightGradient.length; x++) {
         for(let y = 0; y < fullWeightGradient[x].length; y++) {
           fullBiasGradient[x][y] += biasGradient[x][y];
@@ -187,7 +259,6 @@ class NeuralNetwork {
         }
       }
     }
-    error /= inp.length;
-    return error;
+    this.error.push([]);
   }
 }

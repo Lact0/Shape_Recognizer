@@ -3,12 +3,12 @@ let n = 10;
 let grid;
 let curImage = [0, 0];
 const sqr = Math.pow(n, 2);
-let net = new NeuralNetwork(sqr, [sqr, Math.floor(sqr / 2), 2]);
+let net = new NeuralNetwork(sqr, [sqr, Math.floor(sqr / 2), 2], {softmax: true});
 let unit;
 let xStart;
 let yStart;
 let focus = [0, 0];
-let variation = 1.5;
+let variation = 1.3;
 changeWindow();
 let mid = Math.floor(n / 2) + (.5 * (n % 2 - 1));
 grid = makeCircle();
@@ -21,10 +21,10 @@ function load() {
   canvas.height = height;
   document.onkeydown = keyPress;
   text = document.getElementById("topText");
-  drawScreen();
-  for(let i = 0; i < 1000; i++) {
+  for(let i = 0; i < 1500; i++) {
     netTrain(getData());
   }
+  drawScreen();
   netGuess();
 }
 
@@ -91,6 +91,7 @@ function getInput(gr) {
 
 function netGuess() {
   let guess = net.pass(getInput(grid));
+  console.log(guess);
   guess = guess[0] > guess[1]? 1 : 0;
   let ans;
   if(guess == curImage[0]) {
@@ -157,8 +158,14 @@ function keyPress(key) {
   if(key.keyCode == 40) {
     grid[focus[0]][focus[1]] -= .05;
   }
-  grid[focus[0]][focus[1]] = min(max(grid[focus[0]][focus[1]], 0), 1);
   drawScreen();
+  if(key.keyCode == 71) {
+    ctx.clearRect(0, 0, width, height);
+    net.drawGraph(0, 0, width, height);
+    text.innerHTML = 'Error Graph';
+  }
+  grid[focus[0]][focus[1]] = min(max(grid[focus[0]][focus[1]], 0), 1);
+  
 }
 
 function leftClick() {
